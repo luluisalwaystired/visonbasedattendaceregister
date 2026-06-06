@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RMU — Face Attendance System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:   #0a1628;
+    --navy2:  #112240;
+    --navy3:  #1e3a5f;
+    --gold:   #c9a84c;
+    --gold2:  #e8c96e;
+    --cream:  #f5f0e8;
+    --white:  #ffffff;
+    --green:  #22c55e;
+    --red:    #ef4444;
+    --amber:  #f59e0b;
+    --text:   #e2e8f0;
+    --muted:  #94a3b8;
+    --border: rgba(201,168,76,0.2);
+    --glass:  rgba(255,255,255,0.04);
+    --glow:   0 0 40px rgba(201,168,76,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(30,58,95,0.6) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(201,168,76,0.08) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  /* ── Grid lines ── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+
+  /* ── Header ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,22,40,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 68px;
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 14px;
+  }
+
+  .logo-badge {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 16px;
+    color: var(--navy);
+    box-shadow: 0 4px 15px rgba(201,168,76,0.4);
+  }
+
+  .logo-text { font-family: 'Syne', sans-serif; }
+  .logo-text strong { font-size: 17px; font-weight: 700; color: var(--white); letter-spacing: 0.5px; }
+  .logo-text span { display: block; font-size: 11px; color: var(--gold); font-weight: 400; letter-spacing: 1.5px; text-transform: uppercase; }
+
+  .header-status {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--muted);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(1.3); }
+  }
+
+  /* ── Nav ── */
+  nav {
+    position: relative; z-index: 10;
+    display: flex; gap: 4px;
+    padding: 1.5rem 2rem 0;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,22,40,0.4);
+    backdrop-filter: blur(10px);
+  }
+
+  .tab-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 20px;
+    background: none; border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 500;
+    color: var(--muted); cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s;
+    position: relative; bottom: -1px;
+  }
+
+  .tab-btn:hover { color: var(--text); background: var(--glass); }
+
+  .tab-btn.active {
+    color: var(--gold);
+    background: rgba(201,168,76,0.08);
+    border: 1px solid var(--border);
+    border-bottom: 1px solid var(--navy);
+  }
+
+  .tab-icon { font-size: 16px; }
+
+  /* ── Main ── */
+  main {
+    position: relative; z-index: 1;
+    max-width: 1200px; margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeUp 0.3s ease; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 700;
+    color: var(--white); margin-bottom: 1.2rem;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .card-title .icon { color: var(--gold); }
+
+  /* ── Grid layouts ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+
+  @media (max-width: 900px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Form elements ── */
+  .form-group { margin-bottom: 1rem; }
+  .form-group label {
+    display: block; font-size: 12px; font-weight: 500;
+    color: var(--muted); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  input, select {
+    width: 100%; padding: 10px 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 8px;
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  input:focus, select:focus { border-color: var(--gold); }
+  select option { background: var(--navy2); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-radius: 8px; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; text-decoration: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    color: var(--navy); font-weight: 600;
+    box-shadow: 0 4px 15px rgba(201,168,76,0.3);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,168,76,0.4); }
+
+  .btn-outline {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+  .btn-danger { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+  .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+  /* ── Camera ── */
+  .camera-wrap {
+    position: relative;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 4/3;
+    border: 2px solid var(--border);
+  }
+
+  #video, #enroll-video {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+  }
+
+  #overlay, #enroll-overlay {
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+
+  .camera-controls {
+    display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;
+  }
+
+  /* ── Recognition result ── */
+  .result-box {
+    border-radius: 12px; padding: 1.2rem;
+    margin-top: 1rem;
+    display: none;
+    animation: fadeUp 0.3s ease;
+  }
+
+  .result-box.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); }
+  .result-box.fail    { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.3); }
+  .result-box.info    { background: rgba(201,168,76,0.1); border: 1px solid var(--border); }
+
+  .result-name { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--white); }
+  .result-meta { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .result-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    margin-top: 8px;
+  }
+  .badge-present { background: rgba(34,197,94,0.2); color: var(--green); }
+  .badge-already { background: rgba(245,158,11,0.2); color: var(--amber); }
+  .badge-unknown { background: rgba(239,68,68,0.2); color: var(--red); }
+
+  /* ── Stat cards ── */
+  .stat-card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px; font-weight: 800;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 10px 14px;
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 12px 14px; font-size: 14px;
+    border-bottom: 1px solid rgba(201,168,76,0.07);
+  }
+  tr:hover td { background: rgba(201,168,76,0.04); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 500;
+  }
+  .badge-present { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-absent  { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  /* ── Student list ── */
+  .student-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    background: var(--glass);
+    transition: border-color 0.2s;
+  }
+  .student-item:hover { border-color: rgba(201,168,76,0.4); }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--navy3), var(--gold));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px;
+    color: var(--white); flex-shrink: 0;
+  }
+  .student-info { flex: 1; min-width: 0; }
+  .student-name { font-weight: 600; color: var(--white); font-size: 14px; }
+  .student-meta { font-size: 12px; color: var(--muted); }
+  .sample-bar {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted);
+  }
+  .sample-progress {
+    width: 60px; height: 4px;
+    background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;
+  }
+  .sample-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold2));
+    border-radius: 2px;
+  }
+
+  /* ── Enroll progress ── */
+  .enroll-counter {
+    text-align: center; padding: 1rem;
+  }
+  .enroll-ring {
+    width: 80px; height: 80px; margin: 0 auto 8px;
+    position: relative;
+  }
+  .enroll-ring svg { transform: rotate(-90deg); }
+  .enroll-ring circle {
+    fill: none; stroke-width: 6;
+    stroke-linecap: round;
+  }
+  .ring-bg   { stroke: rgba(255,255,255,0.1); }
+  .ring-fill { stroke: var(--gold); transition: stroke-dashoffset 0.4s ease; }
+
+  .enroll-num {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700;
+    color: var(--gold);
+  }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    padding: 12px 20px; border-radius: 10px;
+    font-size: 14px; font-weight: 500;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 320px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { background: rgba(34,197,94,0.9);  color: #fff; }
+  #toast.error   { background: rgba(239,68,68,0.9);  color: #fff; }
+  #toast.info    { background: rgba(201,168,76,0.9); color: var(--navy); }
+
+  /* ── Misc ── */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.2rem;
+  }
+  .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
+  .empty-state { text-align: center; padding: 3rem; color: var(--muted); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .spinner {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: var(--gold);
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .confidence-bar {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+  }
+  .c-track {
+    width: 50px; height: 4px; background: rgba(255,255,255,0.1);
+    border-radius: 2px; overflow: hidden;
+  }
+  .c-fill { height: 100%; border-radius: 2px; background: var(--green); }
+
+  /* ── Scanning animation ── */
+  .scan-line {
+    position: absolute; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    animation: scan 2s ease-in-out infinite;
+    opacity: 0;
+  }
+  .scanning .scan-line { opacity: 1; }
+  @keyframes scan {
+    0%   { top: 0; }
+    100% { top: 100%; }
+  }
+
+  .face-box {
+    position: absolute;
+    border: 2px solid var(--gold);
+    border-radius: 4px;
+    animation: blink-border 1s ease infinite;
+  }
+  @keyframes blink-border {
+    0%, 100% { border-color: var(--gold); box-shadow: 0 0 10px rgba(201,168,76,0.5); }
+    50%       { border-color: var(--gold2); box-shadow: 0 0 20px rgba(201,168,76,0.8); }
+  }
+
+  .course-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 6px;
+    background: rgba(201,168,76,0.1); border: 1px solid var(--border);
+    font-size: 12px; color: var(--gold); font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-badge">RMU</div>
+    <div class="logo-text">
+      <strong>Regional Maritime University</strong>
+      <span>Face Recognition Attendance System</span>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-dot"></div>
+    <span id="header-date"></span>
+  </div>
+</header>
+
+<!-- Nav -->
+<nav>
+  <button class="tab-btn active" onclick="switchTab('attendance')" id="tab-attendance">
+    <span class="tab-icon">📷</span> Take Attendance
+  </button>
+  <button class="tab-btn" onclick="switchTab('enroll')" id="tab-enroll">
+    <span class="tab-icon">➕</span> Enroll Student
+  </button>
+  <button class="tab-btn" onclick="switchTab('students')" id="tab-students">
+    <span class="tab-icon">🎓</span> Students
+  </button>
+  <button class="tab-btn" onclick="switchTab('records')" id="tab-records">
+    <span class="tab-icon">📋</span> Records
+  </button>
+</nav>
+
+<main>
+
+  <!-- ══════════════════════════════════════════════════
+       TAB 1 — TAKE ATTENDANCE
+  ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel active" id="panel-attendance">
+    <div class="grid-2" style="margin-bottom:1.5rem;">
+
+      <!-- Camera panel -->
+      <div class="card">
+        <div class="card-title"><span class="icon">📷</span> Live Camera</div>
+
+        <div class="camera-wrap" id="att-cam-wrap">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="overlay" style="position:absolute;inset:0;pointer-events:none;"></canvas>
+          <div class="scan-line" id="att-scan"></div>
+        </div>
+
+        <div class="camera-controls">
+          <button class="btn btn-primary" id="btn-start-cam" onclick="startAttendanceCam()">▶ Start Camera</button>
+          <button class="btn btn-outline" id="btn-scan" onclick="scanFace()" disabled>🔍 Scan Face</button>
+          <button class="btn btn-outline" id="btn-autoscan" onclick="toggleAutoScan()">⚡ Auto-Scan</button>
+        </div>
+      </div>
+
+      <!-- Controls + result -->
+      <div>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="card-title"><span class="icon">⚙️</span> Session Settings</div>
+          <div class="form-group">
+            <label>Course / Lecture</label>
+            <input type="text" id="att-course" value="CSCI 301" placeholder="e.g. CSCI 301 – Data Structures" />
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="att-date" />
+          </div>
+          <div style="display:flex; gap:8px; margin-top:4px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;">
+              <input type="checkbox" id="chk-mark" checked style="width:auto;accent-color:var(--gold);"/> Auto-mark attendance
+            </label>
+          </div>
+        </div>
+
+        <!-- Today's stats -->
+        <div class="grid-3" style="margin-bottom:1rem;">
+          <div class="stat-card">
+            <div class="stat-num" id="stat-present">0</div>
+            <div class="stat-label">Present</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-total">0</div>
+            <div class="stat-label">Enrolled</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-pct">0%</div>
+            <div class="stat-label">Rate</div>
+          </div>
+        </div>
+
+        <!-- Result display -->
+        <div id="att-result"></div>
+      </div>
+    </div>
+
+    <!-- Recent attendance log -->
+    <div class="card">
+      <div class="section-header">
+        <div class="card-title" style="margin-bottom:0"><span class="icon">📋</span> Today's Attendance</div>
+        <button class="btn btn-outline" style="font-size:12px;" onclick="refreshAttendance()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Student</th><th>ID</th><th>Course</th><th>Time</th><th>Confidence</th>
+          </tr></thead>
+          <tbody id="att-table-body">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📷</div><p>No attendance recorded yet today</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       TAB 2 — ENROLL
+  ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-enroll">
+    <div class="grid-2">
+
+      <div class="card">
+        <div class="card-title"><span class="icon">📸</span> Face Capture</div>
+        <div class="camera-wrap">
+          <video id="enroll-video" autoplay playsinline muted></video>
+          <canvas id="enroll-overlay" style="position:absolute;inset:0;pointer-events:none;"></canvas>
+          <div class="scan-line" id="enroll-scan"></div>
+        </div>
+        <div class="camera-controls">
+          <button class="btn btn-primary" id="btn-start-enroll-cam" onclick="startEnrollCam()">▶ Start Camera</button>
+          <button class="btn btn-outline" id="btn-capture" onclick="captureEnroll()" disabled>📸 Capture</button>
+        </div>
+
+        <!-- Progress ring -->
+        <div class="enroll-counter" id="enroll-counter" style="display:none;">
+          <div class="enroll-ring">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle class="ring-bg"   cx="40" cy="40" r="34" />
+              <circle class="ring-fill" cx="40" cy="40" r="34"
+                id="enroll-ring-fill"
+                stroke-dasharray="213.6"
+                stroke-dashoffset="213.6" />
+            </svg>
+            <div class="enroll-num" id="enroll-num">0</div>
+          </div>
+          <div style="font-size:13px;color:var(--muted);">
+            <span id="enroll-samples">0</span> / 20 samples captured
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+            Vary angles slightly for best results
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="card-title"><span class="icon">🎓</span> Student Details</div>
+          <div class="form-group">
+            <label>Student ID *</label>
+            <input type="text" id="enroll-sid" placeholder="e.g. BCS0000xxx" />
+          </div>
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="enroll-name" placeholder="e.g. Eugene Mensah-Ananoo" />
+          </div>
+          <div class="form-group">
+            <label>Department</label>
+            <select id="enroll-dept">
+              <option value="">— Select Department —</option>
+              <option>Marine Engineering</option>
+              <option>Information Technology</option>
+              <option>Ports and Shipping</option>
+              <option>Electrical Engineering</option>
+              <option>Business Studies</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Program</label>
+            <select id="enroll-program">
+              <option value="">— Select Program —</option>
+              <option>Marine Engineering</option>
+              <option>Computer Science</option>
+              <option>Ports and Shipping</option>
+              <option>Electrical Engineering</option>
+              <option>Accounting</option>
+              <option>Logistics</option>
+              <option>Nautical Science</option>
+              <option>Computer Engineering</option>
+              <option>Information Technology</option>
+              <option>Mechanical Engineering</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Year / Level</label>
+            <select id="enroll-year">
+              <option value="">— Select Year —</option>
+              <option>Level 100</option>
+              <option>Level 200</option>
+              <option>Level 300</option>
+              <option>Level 400</option>
+              <option>Postgraduate</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="width:100%;" onclick="registerStudent()">✓ Register Student</button>
+        </div>
+
+        <div class="card" id="enroll-guide">
+          <div class="card-title"><span class="icon">💡</span> Capture Guide</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.7;">
+            <p>📌 Register the student first, then capture <strong style="color:var(--gold);">20 photos</strong> for best accuracy.</p>
+            <div class="divider" style="margin:10px 0;"></div>
+            <p>✅ Face the camera directly</p>
+            <p>✅ Good even lighting</p>
+            <p>✅ Slight angle variations</p>
+            <p>✅ Remove glasses if possible</p>
+            <div class="divider" style="margin:10px 0;"></div>
+            <button class="btn btn-outline" style="width:100%;margin-top:4px;" onclick="trainModel()">
+              🧠 Train / Update Model
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       TAB 3 — STUDENTS
+  ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-students">
+    <div class="section-header">
+      <div class="card-title" style="margin-bottom:0;font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--white);">
+        <span style="color:var(--gold);">🎓</span> Enrolled Students
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="search-student" placeholder="Search name or ID…" style="width:220px;" oninput="renderStudents()" />
+        <button class="btn btn-primary" onclick="switchTab('enroll')">+ Enroll New</button>
+      </div>
+    </div>
+    <div id="students-list">
+      <div class="empty-state"><div class="empty-icon">🎓</div><p>No students enrolled yet</p></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       TAB 4 — RECORDS
+  ═══════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-records">
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="card-title"><span class="icon">🔍</span> Filter Records</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="form-group" style="margin:0;flex:1;min-width:150px;">
+          <label>Date</label>
+          <input type="date" id="rec-date" />
+        </div>
+        <div class="form-group" style="margin:0;flex:1;min-width:150px;">
+          <label>Course (optional)</label>
+          <input type="text" id="rec-course" placeholder="All courses" />
+        </div>
+        <button class="btn btn-primary" onclick="loadRecords()">Load Records</button>
+        <button class="btn btn-outline" id="btn-export" onclick="exportCSV()" disabled>⬇ Export CSV</button>
+      </div>
+    </div>
+
+    <div id="records-stats" class="grid-3" style="margin-bottom:1.5rem;display:none;"></div>
+
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Name</th><th>Student ID</th><th>Course</th><th>Time</th><th>Confidence</th><th>Status</th>
+          </tr></thead>
+          <tbody id="rec-table-body">
+            <tr><td colspan="6">
+              <div class="empty-state"><div class="empty-icon">📋</div><p>Select a date and load records</p></div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.5rem;">
+      <div class="card-title"><span class="icon">📅</span> Session History</div>
+      <div id="history-list">
+        <div class="empty-state"><p>Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+const API = 'http://localhost:5000/api';
+let attStream = null, enrollStream = null;
+let autoScanInterval = null;
+let autoScanActive = false;
+let currentEnrollSID = null;
+let enrollSampleCount = 0;
+let studentsCache = {};
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const now = new Date();
+  document.getElementById('header-date').textContent =
+    now.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  document.getElementById('att-date').value = toDateStr(now);
+  document.getElementById('rec-date').value  = toDateStr(now);
+  fetchStudents();
+  refreshAttendance();
+  loadHistory();
+});
+
+function toDateStr(d) {
+  return d.toISOString().split('T')[0];
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'students') renderStudents();
+  if (name === 'records')  loadHistory();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ── Students ──────────────────────────────────────────────────────────────────
+async function fetchStudents() {
+  try {
+    const r = await fetch(`${API}/students`);
+    studentsCache = await r.json();
+    updateStats();
+  } catch { }
+}
+
+function renderStudents() {
+  const q = (document.getElementById('search-student')?.value || '').toLowerCase();
+  const list = document.getElementById('students-list');
+  const entries = Object.entries(studentsCache).filter(([sid, s]) =>
+    !q || sid.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
+  );
+
+  if (!entries.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎓</div><p>No students found</p></div>';
+    return;
+  }
+
+  list.innerHTML = entries.map(([sid, s]) => {
+    const samples = s.face_samples || 0;
+    const pct = Math.min((samples / 20) * 100, 100);
+    const initials = s.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    return `
+      <div class="student-item">
+        <div class="avatar">${initials}</div>
+        <div class="student-info">
+          <div class="student-name">${s.name}</div>
+          <div class="student-meta">${sid} · ${s.department || 'N/A'}  · ${s.program || 'N/A'} · ${s.year || 'N/A'}</div>
+        </div>
+        <div class="sample-bar">
+          <div class="sample-progress"><div class="sample-fill" style="width:${pct}%"></div></div>
+          <span>${samples} samples</span>
+        </div>
+        <button class="btn btn-outline" style="font-size:12px;padding:6px 12px;" onclick="selectForEnroll('${sid}','${s.name.replace(/'/,"\\'")}')">📸 Add Faces</button>
+        <button class="btn btn-danger"  style="font-size:12px;padding:6px 12px;" onclick="deleteStudent('${sid}')">🗑</button>
+      </div>`;
+  }).join('');
+}
+
+async function registerStudent() {
+  const sid  = document.getElementById('enroll-sid').value.trim().toUpperCase();
+  const name = document.getElementById('enroll-name').value.trim();
+  const dept = document.getElementById('enroll-dept').value;
+  const prog = document.getElementById('enroll-program').value;
+  const year = document.getElementById('enroll-year').value;
+  if (!sid || !name) { toast('Student ID and name are required', 'error'); return; }
+
+  const r = await fetch(`${API}/students`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ student_id: sid, name, department: dept, program: prog, year })
+  });
+  const data = await r.json();
+  if (!r.ok) { toast(data.error, 'error'); return; }
+
+  toast(`${name} registered successfully!`, 'success');
+  await fetchStudents();
+  currentEnrollSID = sid;
+  enrollSampleCount = 0;
+  updateEnrollRing(0);
+  document.getElementById('enroll-counter').style.display = 'block';
+}
+
+async function deleteStudent(sid) {
+  if (!confirm(`Delete ${studentsCache[sid]?.name}? This cannot be undone.`)) return;
+  await fetch(`${API}/students/${sid}`, { method: 'DELETE' });
+  await fetchStudents();
+  renderStudents();
+  toast('Student removed', 'info');
+}
+
+function selectForEnroll(sid, name) {
+  switchTab('enroll');
+  currentEnrollSID = sid;
+  enrollSampleCount = studentsCache[sid]?.face_samples || 0;
+  document.getElementById('enroll-sid').value = sid;
+  document.getElementById('enroll-name').value = name;
+  updateEnrollRing(enrollSampleCount);
+  document.getElementById('enroll-counter').style.display = 'block';
+  toast(`Adding faces for ${name}`, 'info');
+}
+
+// ── Camera ────────────────────────────────────────────────────────────────────
+async function startAttendanceCam() {
+  try {
+    attStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user', width:640, height:480 } });
+    document.getElementById('video').srcObject = attStream;
+    document.getElementById('btn-scan').disabled = false;
+    document.getElementById('btn-start-cam').disabled = true;
+    toast('Camera started', 'info');
+  } catch(e) { toast('Camera access denied: ' + e.message, 'error'); }
+}
+
+async function startEnrollCam() {
+  try {
+    enrollStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user', width:640, height:480 } });
+    document.getElementById('enroll-video').srcObject = enrollStream;
+    document.getElementById('btn-capture').disabled = false;
+    document.getElementById('btn-start-enroll-cam').disabled = true;
+  } catch(e) { toast('Camera access denied: ' + e.message, 'error'); }
+}
+
+function captureFrame(videoId) {
+  const video = document.getElementById(videoId);
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+// ── Attendance Scan ───────────────────────────────────────────────────────────
+async function scanFace() {
+  if (!attStream) { toast('Start camera first', 'error'); return; }
+  const scanBtn = document.getElementById('btn-scan');
+  scanBtn.disabled = true;
+  scanBtn.innerHTML = '<span class="spinner"></span> Scanning…';
+  document.getElementById('att-cam-wrap').classList.add('scanning');
+
+  const image    = captureFrame('video');
+  const course   = document.getElementById('att-course').value || 'General';
+  const attDate  = document.getElementById('att-date').value;
+  const markAtt  = document.getElementById('chk-mark').checked;
+
+  try {
+    const r = await fetch(`${API}/recognize`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ image, course, date: attDate, mark_attendance: markAtt })
+    });
+    const data = await r.json();
+    displayResult(data);
+    drawBbox(data, 'video', 'overlay');
+    if (markAtt && data.recognized) refreshAttendance();
+  } catch(e) { toast('Server error — is the backend running?', 'error'); }
+
+  document.getElementById('att-cam-wrap').classList.remove('scanning');
+  scanBtn.disabled = false;
+  scanBtn.innerHTML = '🔍 Scan Face';
+}
+
+function toggleAutoScan() {
+  autoScanActive = !autoScanActive;
+  const btn = document.getElementById('btn-autoscan');
+  if (autoScanActive) {
+    btn.innerHTML = '⏹ Stop Auto'; btn.style.borderColor = 'var(--red)';
+    autoScanInterval = setInterval(scanFace, 3000);
+    toast('Auto-scan every 3 seconds', 'info');
+  } else {
+    btn.innerHTML = '⚡ Auto-Scan'; btn.style.borderColor = '';
+    clearInterval(autoScanInterval);
+  }
+}
+
+function displayResult(data) {
+  const box = document.getElementById('att-result');
+  if (!data.recognized) {
+    box.className = 'result-box fail'; box.style.display = 'block';
+    box.innerHTML = `<div style="font-size:32px;margin-bottom:6px;">❓</div>
+      <div class="result-name" style="color:var(--red);">Face Not Recognized</div>
+      <div class="result-meta">Confidence: ${data.confidence ?? 'N/A'} | ${data.message || data.error || ''}</div>`;
+    return;
+  }
+  const icon = data.already_marked ? '🔄' : '✅';
+  const badge = data.already_marked
+    ? `<span class="result-badge badge-already">⚠ Already Marked</span>`
+    : `<span class="result-badge badge-present">✓ Attendance Marked</span>`;
+
+  box.className = 'result-box success'; box.style.display = 'block';
+  box.innerHTML = `
+    <div style="font-size:32px;margin-bottom:6px;">${icon}</div>
+    <div class="result-name">${data.name}</div>
+    <div class="result-meta">${data.student_id} · ${data.department || ''}  · ${data.program || ''} · ${data.year || ''}</div>
+    <div style="margin-top:6px;">${badge}
+      <span class="confidence-bar" style="margin-left:8px;">
+        <span class="c-track"><span class="c-fill" style="width:${Math.max(0,100-(data.confidence/80)*100)}%"></span></span>
+        ${data.confidence.toFixed(1)} conf
+      </span>
+    </div>`;
+}
+
+function drawBbox(data, videoId, canvasId) {
+  const video  = document.getElementById(videoId);
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!data.bbox) return;
+  const { x, y, w, h } = data.bbox;
+  const color = data.recognized ? '#c9a84c' : '#ef4444';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, w, h);
+  // Corner accents
+  const sz = 16;
+  ctx.lineWidth = 3;
+  [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([cx,cy]) => {
+    const dx = cx === x ? sz : -sz, dy = cy === y ? sz : -sz;
+    ctx.beginPath(); ctx.moveTo(cx+dx,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+dy); ctx.stroke();
+  });
+  // Label
+  if (data.name) {
+    ctx.fillStyle = color + 'cc';
+    ctx.fillRect(x, y-24, Math.min(w, 200), 24);
+    ctx.fillStyle = '#fff';
+    ctx.font = '13px DM Sans, sans-serif';
+    ctx.fillText(data.name, x+6, y-6);
+  }
+  setTimeout(() => ctx.clearRect(0,0,canvas.width,canvas.height), 4000);
+}
+
+// ── Enroll Face ───────────────────────────────────────────────────────────────
+async function captureEnroll() {
+  const sid = (document.getElementById('enroll-sid').value || currentEnrollSID || '').trim().toUpperCase();
+  if (!sid) { toast('Please register or select a student first', 'error'); return; }
+  if (!enrollStream) { toast('Start camera first', 'error'); return; }
+
+  const image = captureFrame('enroll-video');
+  document.getElementById('enroll-scan').parentElement.classList.add('scanning');
+
+  try {
+    const r = await fetch(`${API}/enroll`, {
+      method: 'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ student_id: sid, image })
+    });
+    const data = await r.json();
+    if (!r.ok) { toast(data.error, 'error'); return; }
+    enrollSampleCount = data.samples;
+    currentEnrollSID = sid;
+    updateEnrollRing(enrollSampleCount);
+    if (enrollSampleCount >= 20) toast(`✅ Enough samples! Training model…`, 'success');
+    else toast(`Sample ${enrollSampleCount}/20 captured`, 'info');
+    if (studentsCache[sid]) {
+      studentsCache[sid].face_samples = enrollSampleCount;
+    }
+  } catch(e) { toast('Server error', 'error'); }
+
+  document.getElementById('enroll-scan').parentElement.classList.remove('scanning');
+}
+
+function updateEnrollRing(count) {
+  const TOTAL = 20;
+  const circ  = 213.6;
+  const pct   = Math.min(count / TOTAL, 1);
+  document.getElementById('enroll-ring-fill').style.strokeDashoffset = circ - pct * circ;
+  document.getElementById('enroll-num').textContent = count;
+  document.getElementById('enroll-samples').textContent = count;
+  document.getElementById('enroll-counter').style.display = 'block';
+}
+
+async function trainModel() {
+  toast('Training model…', 'info');
+  const r = await fetch(`${API}/train`, { method:'POST' });
+  const d = await r.json();
+  if (!r.ok) { toast(d.error, 'error'); return; }
+  toast(`Model trained on ${d.students_trained} students ✓`, 'success');
+}
+
+// ── Attendance table ──────────────────────────────────────────────────────────
+async function refreshAttendance() {
+  const course  = document.getElementById('att-course')?.value || '';
+  const attDate = document.getElementById('att-date')?.value || toDateStr(new Date());
+  try {
+    const r = await fetch(`${API}/attendance?date=${attDate}${course ? '&course='+encodeURIComponent(course) : ''}`);
+    const log = await r.json();
+    await fetchStudents();
+
+    const tbody = document.getElementById('att-table-body');
+    const allEntries = [];
+    for (const [c, entries] of Object.entries(log)) {
+      for (const [sid, info] of Object.entries(entries)) {
+        allEntries.push({ ...info, student_id: sid, course: c });
+      }
+    }
+
+    if (!allEntries.length) {
+      tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📷</div><p>No attendance recorded yet</p></div></td></tr>';
+    } else {
+      allEntries.sort((a,b) => a.time < b.time ? 1 : -1);
+      tbody.innerHTML = allEntries.map(e => `
+        <tr>
+          <td><strong>${e.name}</strong></td>
+          <td style="color:var(--muted)">${e.student_id}</td>
+          <td><span class="course-tag">${e.course}</span></td>
+          <td>${e.time}</td>
+          <td>
+            <span class="confidence-bar">
+              <span class="c-track"><span class="c-fill" style="width:${Math.max(0,100-(e.confidence/80)*100)}%"></span></span>
+              ${e.confidence}
+            </span>
+          </td>
+        </tr>`).join('');
+    }
+    updateStats(allEntries.length);
+  } catch(e) {}
+}
+
+function updateStats(present) {
+  const total = Object.keys(studentsCache).length;
+  document.getElementById('stat-total').textContent   = total;
+  if (present !== undefined) {
+    document.getElementById('stat-present').textContent = present;
+    document.getElementById('stat-pct').textContent     = total ? Math.round((present/total)*100)+'%' : '0%';
+  }
+}
+
+// ── Records ───────────────────────────────────────────────────────────────────
+async function loadRecords() {
+  const d = document.getElementById('rec-date').value;
+  const c = document.getElementById('rec-course').value;
+  const r = await fetch(`${API}/attendance?date=${d}${c ? '&course='+encodeURIComponent(c) : ''}`);
+  const log = await r.json();
+
+  const tbody = document.getElementById('rec-table-body');
+  const rows = [];
+  for (const [course, entries] of Object.entries(log)) {
+    for (const [sid, info] of Object.entries(entries)) {
+      rows.push({ ...info, student_id: sid, course });
+    }
+  }
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📋</div><p>No records for this date</p></div></td></tr>';
+    document.getElementById('records-stats').style.display = 'none';
+    document.getElementById('btn-export').disabled = true;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(e => `
+    <tr>
+      <td><strong>${e.name}</strong></td>
+      <td style="color:var(--muted)">${e.student_id}</td>
+      <td><span class="course-tag">${e.course}</span></td>
+      <td>${e.time}</td>
+      <td>${e.confidence}</td>
+      <td><span class="badge badge-present">Present</span></td>
+    </tr>`).join('');
+
+  const stats = document.getElementById('records-stats');
+  const courses = [...new Set(rows.map(r => r.course))];
+  stats.style.display = 'grid';
+  stats.innerHTML = `
+    <div class="stat-card"><div class="stat-num">${rows.length}</div><div class="stat-label">Total Present</div></div>
+    <div class="stat-card"><div class="stat-num">${courses.length}</div><div class="stat-label">Courses</div></div>
+    <div class="stat-card"><div class="stat-num">${Object.keys(studentsCache).length}</div><div class="stat-label">Enrolled</div></div>`;
+  document.getElementById('btn-export').disabled = false;
+}
+
+function exportCSV() {
+  const d = document.getElementById('rec-date').value;
+  const c = document.getElementById('rec-course').value;
+  window.location = `${API}/attendance/export?date=${d}${c ? '&course='+encodeURIComponent(c) : ''}`;
+}
+
+async function loadHistory() {
+  const r = await fetch(`${API}/attendance/summary`);
+  const data = await r.json();
+  const box = document.getElementById('history-list');
+  if (!data.length) { box.innerHTML = '<div class="empty-state"><p>No attendance sessions yet</p></div>'; return; }
+  box.innerHTML = data.map(item => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);">
+      <div>
+        <strong style="color:var(--white);">${item.date}</strong>
+        <span style="margin-left:10px;font-size:12px;color:var(--muted);">${item.courses.join(', ')}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="badge badge-present">${item.total} present</span>
+        <button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="quickLoad('${item.date}')">View</button>
+      </div>
+    </div>`).join('');
+}
+
+function quickLoad(d) {
+  document.getElementById('rec-date').value = d;
+  switchTab('records');
+  loadRecords();
+}
+</script>
+</body>
+</html>
