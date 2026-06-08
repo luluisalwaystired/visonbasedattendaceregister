@@ -135,10 +135,11 @@ def get_students():
 @app.route("/api/students", methods=["POST"])
 def add_student():
     body = request.json
-    sid  = body.get("student_id", "").strip().upper()
-    name = body.get("name", "").strip()
-    dept = body.get("department", "").strip()
-    year = body.get("year", "").strip()
+    sid       = body.get("student_id", "").strip().upper()
+    name      = body.get("name", "").strip()
+    dept      = body.get("department", "").strip()
+    programme = body.get("programme", "").strip()
+    year      = body.get("year", "").strip()
 
     if not sid or not name:
         return jsonify({"error": "student_id and name are required"}), 400
@@ -154,6 +155,7 @@ def add_student():
     students[sid] = {
         "name": name,
         "department": dept,
+        "programme": programme,
         "year": year,
         "label_id": label_id,
         "registered_at": datetime.now().isoformat(),
@@ -266,6 +268,7 @@ def recognize():
         "student_id": sid,
         "name": student.get("name"),
         "department": student.get("department"),
+        "programme": student.get("programme"),
         "year": student.get("year"),
         "confidence": round(float(confidence), 2),
         "bbox": {"x": int(x), "y": int(y), "w": int(w), "h": int(h)},

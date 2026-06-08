@@ -603,37 +603,30 @@
           <div class="card-title"><span class="icon">🎓</span> Student Details</div>
           <div class="form-group">
             <label>Student ID *</label>
-            <input type="text" id="enroll-sid" placeholder="e.g. BCS0000xxx" />
+            <input type="text" id="enroll-sid" placeholder="e.g. RMU20240001" />
           </div>
           <div class="form-group">
             <label>Full Name *</label>
-            <input type="text" id="enroll-name" placeholder="e.g. Eugene Mensah-Ananoo" />
+            <input type="text" id="enroll-name" placeholder="e.g. Kwame Mensah" />
           </div>
           <div class="form-group">
             <label>Department</label>
-            <select id="enroll-dept">
+            <select id="enroll-dept" onchange="updateProgrammes()">
               <option value="">— Select Department —</option>
-              <option>Marine Engineering</option>
+              
               <option>Information Technology</option>
-              <option>Ports and Shipping</option>
-              <option>Electrical Engineering</option>
-              <option>Business Studies</option>
+              <option>Transport</option>
+              <option>Electrical</option>
+              <option>Marine Engineering</option>
+              <option>Nautical Science</option>
+              
+              
             </select>
           </div>
           <div class="form-group">
-            <label>Program</label>
-            <select id="enroll-program">
-              <option value="">— Select Program —</option>
-              <option>Marine Engineering</option>
-              <option>Computer Science</option>
-              <option>Ports and Shipping</option>
-              <option>Electrical Engineering</option>
-              <option>Accounting</option>
-              <option>Logistics</option>
-              <option>Nautical Science</option>
-              <option>Computer Engineering</option>
-              <option>Information Technology</option>
-              <option>Mechanical Engineering</option>
+            <label>Programme <span style="color:var(--gold);">*</span></label>
+            <select id="enroll-programme">
+              <option value="">— Select Department first —</option>
             </select>
           </div>
           <div class="form-group">
@@ -810,7 +803,8 @@ function renderStudents() {
         <div class="avatar">${initials}</div>
         <div class="student-info">
           <div class="student-name">${s.name}</div>
-          <div class="student-meta">${sid} · ${s.department || 'N/A'}  · ${s.program || 'N/A'} · ${s.year || 'N/A'}</div>
+          <div class="student-meta">${sid} · ${s.department || 'N/A'}</div>
+          <div class="student-meta" style="color:var(--gold);font-size:11px;">${s.programme || ''} ${s.year ? '· ' + s.year : ''}</div>
         </div>
         <div class="sample-bar">
           <div class="sample-progress"><div class="sample-fill" style="width:${pct}%"></div></div>
@@ -822,17 +816,66 @@ function renderStudents() {
   }).join('');
 }
 
-async function registerStudent() {
-  const sid  = document.getElementById('enroll-sid').value.trim().toUpperCase();
-  const name = document.getElementById('enroll-name').value.trim();
+// ── Programmes per department ─────────────────────────────────────────────────
+const PROGRAMMES = {
+  
+  'Information Technology': [
+    'BSc Information Technology',
+    'BSc Computer Engineering',
+    'BSc Computer Science',
+    'Diploma Information Technology',
+  ],
+  'Transport': [
+    'BSc Accounting & Finance',
+    'BSc Logistics & Supply Chain Management',
+    'Diploma Port & Shipping Management',
+    'BSc Port and Shipping Management',
+  ],
+  
+  'Electrical  ': [
+    'BSc Electrical Engineering',
+    'Diploma Electrical Engineering',
+  ],
+  ' Marine Engineering': [
+    'BSc Marine Engineering',
+    'BSc Mechanical Engineering',
+    'Diploma Marine Engineering',
+    
+  ],
+  ' Nautical Science': [
+    'BSc Nautical Science',
+    'Diploma Nautiacl Science ',
+    
+  ],
+  
+  
+  
+};
+
+function updateProgrammes() {
   const dept = document.getElementById('enroll-dept').value;
-  const prog = document.getElementById('enroll-program').value;
-  const year = document.getElementById('enroll-year').value;
+  const sel  = document.getElementById('enroll-programme');
+  sel.innerHTML = '';
+  if (!dept || !PROGRAMMES[dept]) {
+    sel.innerHTML = '<option value="">— Select Department first —</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— Select Programme —</option>' +
+    PROGRAMMES[dept].map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+async function registerStudent() {
+  const sid       = document.getElementById('enroll-sid').value.trim().toUpperCase();
+  const name      = document.getElementById('enroll-name').value.trim();
+  const dept      = document.getElementById('enroll-dept').value;
+  const programme = document.getElementById('enroll-programme').value;
+  const year      = document.getElementById('enroll-year').value;
   if (!sid || !name) { toast('Student ID and name are required', 'error'); return; }
+  if (!programme)    { toast('Please select a programme', 'error'); return; }
 
   const r = await fetch(`${API}/students`, {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ student_id: sid, name, department: dept, program: prog, year })
+    body: JSON.stringify({ student_id: sid, name, department: dept, programme, year })
   });
   const data = await r.json();
   if (!r.ok) { toast(data.error, 'error'); return; }
@@ -857,8 +900,15 @@ function selectForEnroll(sid, name) {
   switchTab('enroll');
   currentEnrollSID = sid;
   enrollSampleCount = studentsCache[sid]?.face_samples || 0;
-  document.getElementById('enroll-sid').value = sid;
+  const s = studentsCache[sid] || {};
+  document.getElementById('enroll-sid').value  = sid;
   document.getElementById('enroll-name').value = name;
+  if (s.department) {
+    document.getElementById('enroll-dept').value = s.department;
+    updateProgrammes();
+    document.getElementById('enroll-programme').value = s.programme || '';
+  }
+  if (s.year) document.getElementById('enroll-year').value = s.year;
   updateEnrollRing(enrollSampleCount);
   document.getElementById('enroll-counter').style.display = 'block';
   toast(`Adding faces for ${name}`, 'info');
@@ -953,7 +1003,7 @@ function displayResult(data) {
   box.innerHTML = `
     <div style="font-size:32px;margin-bottom:6px;">${icon}</div>
     <div class="result-name">${data.name}</div>
-    <div class="result-meta">${data.student_id} · ${data.department || ''}  · ${data.program || ''} · ${data.year || ''}</div>
+    <div class="result-meta">${data.student_id} · ${data.department || ''} · ${data.programme || ''} · ${data.year || ''}</div>
     <div style="margin-top:6px;">${badge}
       <span class="confidence-bar" style="margin-left:8px;">
         <span class="c-track"><span class="c-fill" style="width:${Math.max(0,100-(data.confidence/80)*100)}%"></span></span>
