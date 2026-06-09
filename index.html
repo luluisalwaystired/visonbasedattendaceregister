@@ -607,11 +607,11 @@
           <div class="card-title"><span class="icon">🎓</span> Student Details</div>
           <div class="form-group">
             <label>Student ID *</label>
-            <input type="text" id="enroll-sid" placeholder="e.g. RMU20240001" />
+            <input type="text" id="enroll-sid" placeholder="e.g. BCS0000128" />
           </div>
           <div class="form-group">
             <label>Full Name *</label>
-            <input type="text" id="enroll-name" placeholder="e.g. Kwame Mensah" />
+            <input type="text" id="enroll-name" placeholder="e.g. Eugene Mensah-Ananoo" />
           </div>
           <div class="form-group">
             <label>Department</label>
@@ -753,6 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchStudents();
   refreshAttendance();
   loadHistory();
+  document.getElementById('att-expected').addEventListener('input', () => updateStats());
 });
 
 function toDateStr(d) {
@@ -1134,7 +1135,7 @@ async function refreshAttendance() {
 }
 
 function updateStats(present) {
-  const expected = parseInt(document.getElementById('att-expected')?.value) || Object.keys(studentsCache).length;
+  const expected = parseInt(document.getElementById('att-expected')?.value) || 0;
   document.getElementById('stat-total').textContent   = expected || '—';
   if (present !== undefined) {
     document.getElementById('stat-present').textContent = present;
