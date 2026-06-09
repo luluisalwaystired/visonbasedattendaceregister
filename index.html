@@ -512,6 +512,10 @@
             <label>Date</label>
             <input type="date" id="att-date" />
           </div>
+          <div class="form-group">
+           <label>Expected Students</label>
+           <input type="number" id="att-expected" placeholder="e.g. 45" min="1" />
+          </div>
           <div style="display:flex; gap:8px; margin-top:4px;">
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;">
               <input type="checkbox" id="chk-mark" checked style="width:auto;accent-color:var(--gold);"/> Auto-mark attendance
@@ -521,19 +525,19 @@
 
         <!-- Today's stats -->
         <div class="grid-3" style="margin-bottom:1rem;">
-          <div class="stat-card">
-            <div class="stat-num" id="stat-present">0</div>
-            <div class="stat-label">Present</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-num" id="stat-total">0</div>
-            <div class="stat-label">Enrolled</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-num" id="stat-pct">0%</div>
-            <div class="stat-label">Rate</div>
-          </div>
-        </div>
+      <div class="stat-card">
+      <div class="stat-num" id="stat-present">0</div>
+       <div class="stat-label">Present</div>
+      </div>
+  <div class="stat-card">
+      <div class="stat-num" id="stat-total">0</div>
+      <div class="stat-label">Expected</div>
+   </div>
+  <div class="stat-card">
+    <div class="stat-num" id="stat-pct">0%</div>
+    <div class="stat-label">Rate</div>
+  </div>
+</div> 
 
         <!-- Result display -->
         <div id="att-result"></div>
@@ -731,7 +735,7 @@
 <div id="toast"></div>
 
 <script>
-const API = 'http://localhost:5000/api';
+const API = window.location.origin + '/api';
 let attStream = null, enrollStream = null;
 let autoScanInterval = null;
 let autoScanActive = false;
@@ -1130,11 +1134,11 @@ async function refreshAttendance() {
 }
 
 function updateStats(present) {
-  const total = Object.keys(studentsCache).length;
-  document.getElementById('stat-total').textContent   = total;
+  const expected = parseInt(document.getElementById('att-expected')?.value) || Object.keys(studentsCache).length;
+  document.getElementById('stat-total').textContent   = expected || '—';
   if (present !== undefined) {
     document.getElementById('stat-present').textContent = present;
-    document.getElementById('stat-pct').textContent     = total ? Math.round((present/total)*100)+'%' : '0%';
+    document.getElementById('stat-pct').textContent     = expected ? Math.round((present / expected) * 100) + '%' : '0%';
   }
 }
 

@@ -1,0 +1,21 @@
+{
+  "CSCI 301": {
+    "BCS0000827": {
+      "name": "Princess Lantsu",
+      "time": "21:08:27",
+      "confidence": 28.92
+    },
+    "BIT1291127": {
+      "name": "Princess Geraldo",
+      "time": "21:10:59",
+      "confidence": 35.99
+    }
+  },
+  "BSML202": {
+    "BPS0003427": {
+      "name": "Christel Nartey",
+      "time": "21:17:22",
+      "confidence": 66.19
+    }
+  }
+}
