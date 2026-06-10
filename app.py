@@ -1,6 +1,6 @@
 """
 RMU Face Recognition Attendance System
-Backend: Flask + OpenCV LBPH Face Recognizer
+Backend: Flask + OpenCV LBPH + MongoDB Atlas
 """
 
 import os
@@ -9,37 +9,91 @@ import json
 import base64
 import numpy as np
 from datetime import datetime, date
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 import pickle
+from pymongo import MongoClient
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 
-# ─── Paths ────────────────────────────────────────────────────────────────────
-BASE       = os.path.dirname(__file__)
+# ─── Paths (faces + model still use filesystem within a session) ──────────────
+BASE       = os.path.dirname(os.path.abspath(__file__))
 FACES_DIR  = os.path.join(BASE, "data", "faces")
 MODELS_DIR = os.path.join(BASE, "data", "models")
-LOGS_DIR   = os.path.join(BASE, "data", "logs")
-STUDENTS_F = os.path.join(BASE, "data", "students.json")
 MODEL_FILE = os.path.join(MODELS_DIR, "recognizer.yml")
 LABELS_FILE= os.path.join(MODELS_DIR, "labels.pkl")
 
-for d in [FACES_DIR, MODELS_DIR, LOGS_DIR]:
+for d in [FACES_DIR, MODELS_DIR]:
     os.makedirs(d, exist_ok=True)
+
+# ─── MongoDB ──────────────────────────────────────────────────────────────────
+MONGO_URI = os.environ.get("MONGO_URI", "")
+if MONGO_URI:
+    client     = MongoClient(MONGO_URI)
+    db         = client["Cluster0"]  # Change if your DB name is different
+    col_students  = db["students"]
+    col_logs      = db["attendance_logs"]
+    USE_MONGO  = True
+    print("✅ Connected to MongoDB Atlas")
+else:
+    USE_MONGO  = False
+    print("⚠️  No MONGO_URI found — using local JSON files")
+
+# ─── Fallback local JSON paths ────────────────────────────────────────────────
+STUDENTS_F = os.path.join(BASE, "data", "students.json")
+LOGS_DIR   = os.path.join(BASE, "data", "logs")
+os.makedirs(LOGS_DIR, exist_ok=True)
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 def load_students():
+    if USE_MONGO:
+        docs = col_students.find({}, {"_id": 0})
+        return {d["student_id"]: d for d in docs}
     if os.path.exists(STUDENTS_F):
         with open(STUDENTS_F) as f:
             return json.load(f)
     return {}
 
-def save_students(data):
+def save_students(data: dict):
+    """data is full dict; upsert each student into Mongo."""
+    if USE_MONGO:
+        for sid, info in data.items():
+            col_students.update_one(
+                {"student_id": sid},
+                {"$set": {**info, "student_id": sid}},
+                upsert=True
+            )
+        return
     with open(STUDENTS_F, "w") as f:
         json.dump(data, f, indent=2)
 
+def save_one_student(sid: str, info: dict):
+    if USE_MONGO:
+        col_students.update_one(
+            {"student_id": sid},
+            {"$set": {**info, "student_id": sid}},
+            upsert=True
+        )
+        return
+    students = load_students()
+    students[sid] = info
+    with open(STUDENTS_F, "w") as f:
+        json.dump(students, f, indent=2)
+
+def delete_one_student(sid: str):
+    if USE_MONGO:
+        col_students.delete_one({"student_id": sid})
+        return
+    students = load_students()
+    students.pop(sid, None)
+    with open(STUDENTS_F, "w") as f:
+        json.dump(students, f, indent=2)
+
 def load_log(log_date: str):
+    if USE_MONGO:
+        doc = col_logs.find_one({"date": log_date}, {"_id": 0})
+        return doc.get("log", {}) if doc else {}
     path = os.path.join(LOGS_DIR, f"{log_date}.json")
     if os.path.exists(path):
         with open(path) as f:
@@ -47,9 +101,22 @@ def load_log(log_date: str):
     return {}
 
 def save_log(log_date: str, data: dict):
+    if USE_MONGO:
+        col_logs.update_one(
+            {"date": log_date},
+            {"$set": {"date": log_date, "log": data}},
+            upsert=True
+        )
+        return
     path = os.path.join(LOGS_DIR, f"{log_date}.json")
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
+
+def all_log_dates():
+    if USE_MONGO:
+        return [d["date"] for d in col_logs.find({}, {"date": 1, "_id": 0}).sort("date", -1)]
+    files = [f.replace(".json","") for f in os.listdir(LOGS_DIR) if f.endswith(".json")]
+    return sorted(files, reverse=True)
 
 def decode_image(b64_string: str) -> np.ndarray:
     """Decode base64 image → BGR numpy array."""
@@ -161,7 +228,7 @@ def add_student():
         "registered_at": datetime.now().isoformat(),
         "face_samples": 0,
     }
-    save_students(students)
+    save_one_student(sid, students[sid])
     os.makedirs(os.path.join(FACES_DIR, sid), exist_ok=True)
     return jsonify({"success": True, "student": students[sid]})
 
@@ -171,13 +238,11 @@ def delete_student(sid):
     students = load_students()
     if sid not in students:
         return jsonify({"error": "Not found"}), 404
-    del students[sid]
-    save_students(students)
+    delete_one_student(sid)
     import shutil
     face_dir = os.path.join(FACES_DIR, sid)
     if os.path.isdir(face_dir):
         shutil.rmtree(face_dir)
-    # Retrain
     build_recognizer()
     return jsonify({"success": True})
 
@@ -208,7 +273,7 @@ def enroll_face():
     cv2.imwrite(os.path.join(face_folder, f"{count+1:04d}.jpg"), face_gray)
 
     students[sid]["face_samples"] = count + 1
-    save_students(students)
+    save_one_student(sid, students[sid])
 
     # Retrain after every 5 samples (or at 1st)
     if (count + 1) % 5 == 0 or count == 0:
@@ -304,12 +369,10 @@ def get_attendance():
 
 @app.route("/api/attendance/summary", methods=["GET"])
 def attendance_summary():
-    """List all log dates and counts."""
-    files = [f.replace(".json", "") for f in os.listdir(LOGS_DIR) if f.endswith(".json")]
-    files.sort(reverse=True)
+    dates = all_log_dates()
     summary = []
-    for d in files:
-        log = load_log(d)
+    for d in dates:
+        log   = load_log(d)
         total = sum(len(v) for v in log.values())
         summary.append({"date": d, "total": total, "courses": list(log.keys())})
     return jsonify(summary)
