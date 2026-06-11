@@ -30,7 +30,7 @@ for d in [FACES_DIR, MODELS_DIR]:
 # ─── MongoDB ──────────────────────────────────────────────────────────────────
 MONGO_URI = os.environ.get("MONGO_URI", "")
 if MONGO_URI:
-    client     = MongoClient(MONGO_URI)
+    client        = MongoClient(MONGO_URI, tls=True, tlsAllowInvalidCertificates=True)
     db         = client["Cluster0"]  # Change if your DB name is different
     col_students  = db["students"]
     col_logs      = db["attendance_logs"]
